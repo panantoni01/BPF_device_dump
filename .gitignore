@@ -1,0 +1,4 @@
+dump_device_state
+*.o
+*.skel.h
+.vscode/
