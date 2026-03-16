@@ -13,6 +13,7 @@ all: $(TARGET)
 $(TARGET): $(USER_C) $(USER_SKEL)
 	$(CROSS_COMPILE)$(CC) -o $@ $(USER_C) \
 		-Wall \
+		-I ./include \
 		-I$(LINUX_SRC)/tools/bpf/bpftool/libbpf/include \
 		-L$(LINUX_SRC)/tools/bpf/bpftool/libbpf/ \
 		-l:libbpf.a -lelf -lz
