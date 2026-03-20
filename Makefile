@@ -25,6 +25,6 @@ $(USER_SKEL): $(BPF_OBJ)
 	bpftool gen skeleton $< > $@
 
 clean:
-	rm -f *.skel.h *.bpf.o
+	rm -f *.skel.h *.bpf.o $(TARGET)
 
 .PHONY: all
