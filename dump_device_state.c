@@ -6,20 +6,27 @@
 
 int main(int argc, char *argv[])
 {
-        struct spi_dev_config spi_cfg;
+        struct user_config user_cfg;
         struct dump_device_state_bpf *skel;
         int opt, err = 0;
 
-        while ((opt = getopt(argc, argv, "a:b:")) != -1) {
+        while ((opt = getopt(argc, argv, "a:b:r:")) != -1) {
                 switch (opt) {
                 case 'a':
-                        spi_cfg.cs = atoi(optarg);
+                        user_cfg.cs = atoi(optarg);
                         break;
                 case 'b':
-                        spi_cfg.bus_num = atoi(optarg);
+                        user_cfg.bus_num = atoi(optarg);
                         break;
+		case 'r':
+			user_cfg.reg_size = atoi(optarg);
+			if (user_cfg.reg_size != 8 &&
+			    user_cfg.reg_size != 16 &&
+			    user_cfg.reg_size != 32)
+				return -EINVAL;
+			break;
                 default:
-                        fprintf(stderr, "usage: %s -a <cs> -b <bus_num>\n", argv[0]);
+                        fprintf(stderr, "usage: %s -a <cs> -b <bus_num> -r <reg_size>\n", argv[0]);
                         return -EINVAL;
                 }
         }
@@ -30,7 +37,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-        memcpy(&skel->bss->spi_cfg, &spi_cfg, sizeof(struct spi_dev_config));
+        memcpy(&skel->bss->user_cfg, &user_cfg, sizeof(struct user_config));
 
 	err = dump_device_state_bpf__load(skel);
 	if (err) {

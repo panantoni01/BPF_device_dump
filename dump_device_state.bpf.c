@@ -6,7 +6,7 @@
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
-struct spi_dev_config spi_cfg;
+struct user_config user_cfg;
 
 struct reg_op {
         u64 timestamp;
@@ -24,7 +24,7 @@ struct {
 struct reg_record {
         u64 timestamp_sec;
         u64 timestamp_nsec;
-        u32 value;
+        char value_str[12]; /* 32/16/8 bit value in hex */
 };
 
 struct {
@@ -46,7 +46,7 @@ int BPF_KPROBE(kprobe_regmap_write, struct regmap *map, unsigned int reg, unsign
         s16 bus_num = BPF_CORE_READ(curr_spi_dev, controller, bus_num);
         u8 chip_select = BPF_CORE_READ(curr_spi_dev, chip_select[0]);
 
-        if (bus_num == spi_cfg.bus_num && chip_select == spi_cfg.cs) {
+        if (bus_num == user_cfg.bus_num && chip_select == user_cfg.cs) {
                 r_op.timestamp = bpf_ktime_get_ns();
                 r_op.reg = (u8)reg;
                 r_op.value = val;
@@ -64,6 +64,7 @@ int BPF_KRETPROBE(kretprobe_regmap_write, int ret)
         u64 pid_tgid;
         struct reg_op* r_op;
         struct reg_record r_record;
+        u64 reg_value;
 
         if (ret == 0) {
                 pid_tgid = bpf_get_current_pid_tgid();
@@ -74,7 +75,26 @@ int BPF_KRETPROBE(kretprobe_regmap_write, int ret)
 
                 r_record.timestamp_sec = r_op->timestamp / 1000000000;
                 r_record.timestamp_nsec = r_op->timestamp % 1000000000;
-                r_record.value = r_op->value;
+                switch(user_cfg.reg_size) {
+                case 8:
+                        reg_value = r_op->value & 0x000000FF;
+                        bpf_snprintf(r_record.value_str, sizeof(r_record.value_str),
+                                     "0x%02llx", &reg_value, sizeof(u64));
+                        break;
+                case 16:
+                        reg_value = r_op->value & 0x0000FFFF;
+                        bpf_snprintf(r_record.value_str, sizeof(r_record.value_str),
+                                     "0x%04llx", &reg_value, sizeof(u64));
+                        break;
+                case 32:
+                        reg_value = r_op->value;
+                        bpf_snprintf(r_record.value_str, sizeof(r_record.value_str),
+                                     "0x%08llx", &reg_value, sizeof(u64));
+                        break;
+                default:
+                        /* unreachable */
+                        break;
+                }
 
                 result = bpf_map_update_elem(&registers, &r_op->reg, &r_record, BPF_ANY);
         }

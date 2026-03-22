@@ -3,9 +3,10 @@
 
 #define SPI_DEVICE_CS_CNT_MAX 4
 
-struct spi_dev_config {
+struct user_config {
         short bus_num;
         unsigned char cs;
+        unsigned char reg_size;
 };
 
 #endif /* __DUMP_DEVICE_STATE_H__ */
